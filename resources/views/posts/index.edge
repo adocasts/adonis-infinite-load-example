@@ -1,0 +1,45 @@
+<h1 style="padding: 2rem;">Posts</h1>
+
+<div id="scroller" style="position: relative;">
+  <div class="scroller_list">
+    @!component('components/post_list', { posts: page.rows })
+  </div>
+  <div class="scroller_buffer" style="position: absolute; bottom: 0; left:0; width: 100%; height: 50vh; pointer-events: none;"></div>
+</div>
+
+<script>
+  const scrollerList = document.querySelector('#scroller .scroller_list')
+  const scrollerBuffer = document.querySelector('#scroller .scroller_buffer')
+  const states = {
+    IDLE: 0,
+    WORKING: 1,
+    DONE: 2
+  }
+
+  let state = states.IDLE
+  let currentPage = {{ page.currentPage }}
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        fetchNextPage()
+      }
+    })
+  })
+
+  observer.observe(scrollerBuffer)
+
+  async function fetchNextPage() {
+    if (state === states.WORKING) return
+
+    const nextPage = ++currentPage;
+    const { html, page } = await fetch(`/api/posts/paginate/${nextPage}`).then(r => r.json())
+
+    scrollerList.innerHTML += html
+
+    if (nextPage >= page.meta.last_page) {
+      observer.unobserve(scrollerBuffer)
+      state = states.DONE
+    }
+  }
+</script>
